@@ -22,10 +22,10 @@ const createSuperAdmin = async () => {
       const existingSuperAdmin = await userModel.findOne({ role: "super admin" });
 
       if (!existingSuperAdmin) {
-          const hashedPassword = bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD, 10);
+          const hashedPassword = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD, 10);
 
           const result = await userModel.create({
-              username: "super admin",
+              username: "superadmin",
               email: process.env.SUPER_ADMIN_EMAIL,
               password: hashedPassword,
               role: "super admin",

@@ -13,13 +13,11 @@ export const loginUser = async (req, res, next) => {
     if (error) {
         return res.status(422).json(error);
     }
-
-
     //Check database for user existence
     const user = await userModel.findOne({
-        $or: [
+        $or:[
             { username: value.username },
-            { email: value.username }
+            { email: value.email }
         ]
     });
 
