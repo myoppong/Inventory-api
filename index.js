@@ -42,7 +42,7 @@ const createSuperAdmin = async () => {
 createSuperAdmin();
 
 //listen for incoming request
-const port = process.env.port||61;
+const port = process.env.port;
 app.listen(port, () => {
     console.log(`server listening on port ${port}`);
 })
