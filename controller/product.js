@@ -1,5 +1,5 @@
 import {productModel} from "../models/products.js";
-import { generateSKU } from "../utils/generateSku.js";
+import { generateSKU } from "../utils/generateSKU.js";
 import { generateQRCode, generateBarcode } from "../utils/generateQRBarcode.js";
 
 // Create Product Function
