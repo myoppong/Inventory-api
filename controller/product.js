@@ -1,6 +1,7 @@
 import {productModel} from "../models/products.js";
 import { generateSKU } from "../utils/generateSKU.js";
 import { generateQRCode, generateBarcode } from "../utils/generateQRBarcode.js";
+import {imagekit} from "../utils/imagekit.js";
 
 // Create Product Function
 export const createProduct = async (req, res, next) => {
@@ -24,11 +25,25 @@ export const createProduct = async (req, res, next) => {
         const qrCode = await generateQRCode(sku);
         const barcode = await generateBarcode(sku);
 
-        // Upload Image to Cloudinary
-        let imageUrl = "";
-        if (req.file) {
-            imageUrl = req.file.path; // Cloudinary image URL
-        }
+        // let imageUrl = "";
+        // if (req.file) {
+        //     console.log("File received:", req.file);
+        //     imageUrl = req.file.path; // Cloudinary URL
+        //     console.log("Uploaded Image URL:", imageUrl);
+        // }
+
+    // Upload image to ImageKit
+    let imageUrl = "";
+    if (req.file) {
+      const uploadResponse = await imagekit.upload({
+        file: req.file.buffer, // buffer from multer memory storage
+        fileName: req.file.originalname,
+        folder: "/inventry",
+      });
+
+      imageUrl = uploadResponse.url;
+      console.log("Image uploaded to ImageKit:", imageUrl);
+    }
 
         // Create new product
         const newProduct = await productModel.create({

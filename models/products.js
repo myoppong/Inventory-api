@@ -7,15 +7,13 @@ const productSchema = new Schema (
     name: { type: String, required: true, trim: true },
     sku: { type: String, unique: true }, // Auto-generated
     price: { type: Number, required: true },
-    category: { type: String, required: true },
-    //type:Schema.Types.ObjectId, ref: "Category",
+    category: { type:Schema.Types.ObjectId, ref: "Category", required: true },
     stockQuantity: { type: Number, required: true },
     image: { type: String }, // Image URL
     qrCode: { type: String }, // Auto-generated
     barcode: { type: String }, // Auto-generated
     batchNumber: { type: String, default: null },
-    expiryDate: { type: Date, default: null },
-    isDeleted: { type: Boolean, default: false }, // Soft delete support
+    expiryDate: { type: Date, default: null } 
 },
 
 { timestamps :true} 

@@ -10,7 +10,7 @@ import {
   printProductDetails,
 } from "../controller/product.js";
 import { isAuthenticated, authorizedRoles } from "../middlewares/auth.js";
-import { productPicturesUpload, } from "../middlewares/upload.js";
+import { productPicturesUpload, } from "../utils/imagekit.js";
 
 const productRouter = Router();
 

@@ -1,30 +1,44 @@
-import cloudinary from 'cloudinary';
-const { v2 } = cloudinary;
+// import cloudinary from 'cloudinary';
+// const { v2 } = cloudinary;
 
-// import { v2 as cloudinary } from 'cloudinary';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import multer from 'multer';
-import dotenv from 'dotenv';
+// // import { v2 as cloudinary } from 'cloudinary';
+// import { CloudinaryStorage } from 'multer-storage-cloudinary';
+// import multer from 'multer';
+// import dotenv from 'dotenv';
 
-dotenv.config();
+// dotenv.config();
 
-// Configure Cloudinary
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-});
+// // Configure Cloudinary
+// cloudinary.config({
+//     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+//     api_key: process.env.CLOUDINARY_API_KEY,
+//     api_secret: process.env.CLOUDINARY_API_SECRET
+// });
+
+
+
+
+// const storage = new CloudinaryStorage({
+//     cloudinary,
+//     params: {
+//         folder: 'ecommerce-api',
+//         allowed_formats: ['jpg', 'jpeg', 'png'],  // Restrict file types
+//         public_id: (req, file) => file.fieldname + '-' + Date.now(),  // Unique name
+//     }
+// });
+
+// export const productPicturesUpload = multer({ storage });
 
 // Multer Cloudinary Storage
-const storage = new CloudinaryStorage({
-    cloudinary,
-    params: {
-        folder: 'ecommerce-api/product-pictures',
-        public_id: (req, file) => file.originalname,
-    }
-});
+// const storage = new CloudinaryStorage({
+//     cloudinary,
+//     params: {
+//         folder: 'ecommerce-api/product-pictures',
+//         public_id: (req, file) => file.originalname,
+//     }
+// });
 
-export const productPicturesUpload = multer({ storage });
+// export const productPicturesUpload = multer({ storage });
 
 // Set up Multer storage to use Cloudinary
 // const storage = new CloudinaryStorage({
