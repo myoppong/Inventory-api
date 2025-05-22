@@ -36,13 +36,13 @@ export const loginUser = async (req, res, next) => {
     }
 
     // Check Role
-    if (user.role !== value.role) {
+    // if (user.role !== value.role) {
 
-        return res.status(403).json({ message: "Unauthorized role selected" });
-    }
+    //     return res.status(403).json({ message: "Unauthorized role selected" });
+    // }
     //generate access token
     const accessToken = jwt.sign(
-        { id: user.id, role: user.role },
+        { id: user.id, role: user.role, username:user.username,  },
         process.env.JWT_SECRET_KEY,
         { expiresIn: '24h' }
     )
@@ -53,7 +53,8 @@ export const loginUser = async (req, res, next) => {
         accessToken,
         user: {
             role: user.role,
-            email: user.email
+            email: user.email,
+            username: user.username
         }
 
     });

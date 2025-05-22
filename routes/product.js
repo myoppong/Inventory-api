@@ -1,4 +1,3 @@
-import express from "express";
 import { Router } from "express";
 import {
   createProduct,
@@ -7,8 +6,7 @@ import {
   updateProduct,
   deleteProduct,
   getProductDetails,
-  printProductDetails,
-} from "../controller/product.js";
+  printProductDetails,} from "../controller/product.js";
 import { isAuthenticated, authorizedRoles } from "../middlewares/auth.js";
 import { productPicturesUpload, } from "../utils/imagekit.js";
 
@@ -21,22 +19,16 @@ productRouter.post("/products/create", isAuthenticated, authorizedRoles("admin")
 //  Get all products (Authenticated users)
 productRouter.get("/products", isAuthenticated, getProducts);
 
-
 //  Quick view of a product (Authenticated users)
 productRouter.get("/products/:id/quick-view", isAuthenticated, getProductQuickView);
 
 //  Get product details (Authenticated users)
 productRouter.get("/products/:id/product-details", isAuthenticated, getProductDetails);
-
-
-
 //  Update a product (Only Admins)
 productRouter.put("/products/:id/update", isAuthenticated, authorizedRoles("admin"), updateProduct);
 
 //  Delete a product (Only Admins)
 productRouter.delete("/products/:id/delete", isAuthenticated, authorizedRoles("admin"), deleteProduct);
-
-//  Upload product image (Only Admins)
 
 //  Print Product QR Code & Barcode (Authenticated users)
 productRouter.get("/products/:id/print", isAuthenticated, printProductDetails);

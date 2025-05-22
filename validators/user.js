@@ -4,7 +4,6 @@ export const loginUserValidator = Joi.object({
   username: Joi.string().min(3).max(50),
   email: Joi.string().email(),
   password: Joi.string().min(6).required(),
-  role: Joi.string().valid("cashier", "admin","super admin").required(),
 }).xor('username','email');
 
 

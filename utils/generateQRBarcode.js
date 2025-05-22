@@ -7,7 +7,7 @@ export const generateQRCode = async (data) => {
   } catch (error) {
     console.error("QR Code Generation Error:", error);
     return null;
-  }
+  } 
 };
 
 export const generateBarcode = async (data) => {

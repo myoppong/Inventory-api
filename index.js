@@ -1,19 +1,24 @@
 import express from 'express';
 import userRouter from './routes/user.js';
 import productRouter from './routes/product.js';
+import categoryRouter from './routes/category.js';
+import stockRouter from './routes/stock.js';
+
 import  mongoose  from 'mongoose';
 import { userModel } from './models/user.js';
-import cors from "cors"; 
 import bcrypt from "bcrypt";
-import dotenv from "dotenv"
+import dotenv from "dotenv";
+import cors from "cors";
 
 dotenv.config()
 await mongoose.connect(process.env.MONGO_URI)
 const app = express();
 app.use(express.json());
-
+ app.use(cors());
 app.use(userRouter);
 app.use(productRouter)
+app.use(categoryRouter)
+app.use(stockRouter)
 
 
 // Create Super Admin

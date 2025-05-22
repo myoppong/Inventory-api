@@ -5,7 +5,7 @@ import { isAuthenticated, authorizedRoles } from "../middlewares/auth.js";
 //create user router
 const userRouter = Router();
 
-
++
 //define user routes
 userRouter.post('/users/login', loginUser);
 userRouter.get('/users/me', isAuthenticated, getAuthenticatedUser);
