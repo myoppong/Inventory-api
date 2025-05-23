@@ -144,6 +144,31 @@ export const deleteUser = async (req, res, next) => {
 }
 
 // Get All Users    
+export const getUsers = async (req, res) => {
+    try {
+        const users = await userModel.find();
+        return res.status(200).json(users);
+    } catch (error) {
+        return res.status(500).json({ message: "Error fetching users", error });
+    }
+};
+
+// Get Single User
+// export const getUser = async (req, res) => {
+//     const { error } = getUserValidator.validate(req.params);
+//     if (error) return res.status(400).json({ message: error.details[0].message });
+
+//     try {
+//         const user = await userModel.findById(req.params.id);
+//         if (!user) return res.status(404).json({ message: "User not found" });
+
+//         return res.status(200).json(user);
+//     } catch (error) {
+//         return res.status(500).json({ message: "Error fetching user", error });
+//     }
+// };
+
+
 export const getUser = async (req, res, next) => {
   // 1. Validate the incoming :id param
   const { error } = getUserValidator.validate(req.params);
@@ -165,7 +190,7 @@ export const getUser = async (req, res, next) => {
 
     // 4. Build a clean response object
     const responseUser = {
-      id:        user._id,
+      id:        user.id,
       username:  user.username,
       email:     user.email,
       role:      user.role,
@@ -185,22 +210,6 @@ export const getUser = async (req, res, next) => {
     return next(err);
   }
 };
-
-// Get Single User
-// export const getUser = async (req, res) => {
-//     const { error } = getUserValidator.validate(req.params);
-//     if (error) return res.status(400).json({ message: error.details[0].message });
-
-//     try {
-//         const user = await userModel.findById(req.params.id);
-//         if (!user) return res.status(404).json({ message: "User not found" });
-
-//         return res.status(200).json(user);
-//     } catch (error) {
-//         return res.status(500).json({ message: "Error fetching user", error });
-//     }
-// };
-
 
 // export const getAuthenticatedUser = async (req, res, next) => {
 
