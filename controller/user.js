@@ -144,42 +144,113 @@ export const deleteUser = async (req, res, next) => {
 }
 
 // Get All Users    
-export const getUsers = async (req, res) => {
-    try {
-        const users = await userModel.find();
-        return res.status(200).json(users);
-    } catch (error) {
-        return res.status(500).json({ message: "Error fetching users", error });
+export const getUser = async (req, res, next) => {
+  // 1. Validate the incoming :id param
+  const { error } = getUserValidator.validate(req.params);
+  if (error) {
+    return res
+      .status(400)
+      .json({ message: `Invalid user ID: ${error.details[0].message}` });
+  }
+
+  try {
+    // 2. Find user by ID, exclude sensitive/internal fields
+    const user = await userModel.findById(req.params.id)
+      .select('-password -__v');
+
+    // 3. Handle not found
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
     }
+
+    // 4. Build a clean response object
+    const responseUser = {
+      id:        user._id,
+      username:  user.username,
+      email:     user.email,
+      role:      user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      lastLogin: user.lastLogin,
+      // …any other public fields…
+    };
+
+    // 5. Send it
+    return res.status(200).json({
+      message: 'User fetched successfully.',
+      user:    responseUser,
+    });
+  } catch (err) {
+    // 6. Forward unexpected errors
+    return next(err);
+  }
 };
 
 // Get Single User
-export const getUser = async (req, res) => {
-    const { error } = getUserValidator.validate(req.params);
-    if (error) return res.status(400).json({ message: error.details[0].message });
+// export const getUser = async (req, res) => {
+//     const { error } = getUserValidator.validate(req.params);
+//     if (error) return res.status(400).json({ message: error.details[0].message });
 
-    try {
-        const user = await userModel.findById(req.params.id);
-        if (!user) return res.status(404).json({ message: "User not found" });
+//     try {
+//         const user = await userModel.findById(req.params.id);
+//         if (!user) return res.status(404).json({ message: "User not found" });
 
-        return res.status(200).json(user);
-    } catch (error) {
-        return res.status(500).json({ message: "Error fetching user", error });
-    }
-};
+//         return res.status(200).json(user);
+//     } catch (error) {
+//         return res.status(500).json({ message: "Error fetching user", error });
+//     }
+// };
+
+
+// export const getAuthenticatedUser = async (req, res, next) => {
+
+
+//     try {
+
+//         //get user by id using req.auth.id
+//         const result = await userModel
+//             .findById(req.auth.id)
+//             .select({ password: false });
+//         //return response
+//         res.status(200).json(result);
+//         console.log("success!");
+//     } catch (error) {
+//         next(error);
+//     }
+// };
+
 
 
 export const getAuthenticatedUser = async (req, res, next) => {
-    try {
+  try {
+    // Atomically update lastLogin and return the new document
+    const user = await userModel.findByIdAndUpdate(
+      req.auth.id,
+      { $set: { lastLogin: new Date() } },
+      { new: true, select: '-password -__v' } // exclude password and __v
+    );
 
-        //get user by id using req.auth.id
-        const result = await userModel
-            .findById(req.auth.id)
-            .select({ password: false });
-        //return response
-        res.status(200).json(result);
-        console.log("success!");
-    } catch (error) {
-        next(error);
+    if (!user) {
+      return res.status(404).json({ message: 'Authenticated user not found.' });
     }
+
+    // Return a structured envelope
+    return res.status(200).json({
+      message: 'User fetched successfully.',
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+        // any other safe fields you want exposed:
+        // createdAt: user.createdAt,
+      },
+    });
+  } catch (error) {
+    // Pass unexpected errors to your error handler
+    return next(error);
+  }
 };
