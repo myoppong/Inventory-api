@@ -52,6 +52,7 @@ export const createProduct = async (req, res) => {
         folder: '/inventory',
       });
       imageUrl = upload.url;
+      imageFileId = upload.fileId; 
     }
 
     // Create product entry
@@ -68,6 +69,7 @@ export const createProduct = async (req, res) => {
       batchNumber,
       expiryDate,
       image: imageUrl,
+      imageFileId: imageFileId,
       qrCode,
       barcode,
     });
@@ -257,44 +259,78 @@ export const getProductQuickView = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    const {
+      name,
+      price,
+      costPrice,
+      category,
+      description,
+      reorderThreshold,
+      batchNumber,
+      expiryDate
+    } = req.body;
 
-    // Clone body and strip out stockQuantity
-    const updateData = { ...req.body };
-    delete updateData.stockQuantity;
-
-    // If category is being changed, validate it
-    if (updateData.category) {
-      const cat = await Category.findById(updateData.category);
-      if (!cat) {
-        return res.status(400).json({ error: 'Invalid category ID.' });
-      }
-    }
-
-    // Perform update with validators
-    const updated = await productModel.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).lean();
-
-    if (!updated) {
+    const product = await productModel.findById(id);
+    if (!product) {
       return res.status(404).json({ error: 'Product not found.' });
     }
 
+    if (category) {
+      const categoryExists = await categoryModel.findById(category);
+      if (!categoryExists) {
+        return res.status(400).json({ error: 'Invalid category selected.' });
+      }
+    }
+
+    //  If new image uploaded, delete old one from ImageKit
+    let imageUrl = product.image;
+    let imageFileId = product.imageFileId;
+
+    if (req.file) {
+      // Delete previous image if it exists
+      if (product.imageFileId) {
+        try {
+          await imagekit.deleteFile(product.imageFileId);
+        } catch (delErr) {
+          console.warn('Failed to delete old image from ImageKit:', delErr.message);
+        }
+      }
+
+      const upload = await imagekit.upload({
+        file: req.file.buffer,
+        fileName: req.file.originalname,
+        folder: '/inventory',
+      });
+
+      imageUrl = upload.url;
+      imageFileId = upload.fileId;
+    }
+
+    // Update fields
+    product.name = name || product.name;
+    product.price = price || product.price;
+    product.costPrice = costPrice || product.costPrice;
+    product.category = category || product.category;
+    product.description = description || product.description;
+    product.reorderThreshold = reorderThreshold || product.reorderThreshold;
+    product.batchNumber = batchNumber || product.batchNumber;
+    product.expiryDate = expiryDate || product.expiryDate;
+    product.image = imageUrl;
+    product.imageFileId = imageFileId;
+
+    await product.save();
+
     return res.status(200).json({
       message: 'Product updated successfully.',
-      product: updated
+      product
     });
+
   } catch (err) {
-    if (err.name === 'MongoServerError' && err.code === 11000) {
-      return res.status(409).json({ error: 'Duplicate key error during update.' });
-    }
-    return res.status(500).json({
-      error: 'Failed to update product.',
-      details: err.message
-    });
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to update product.', details: err.message });
   }
 };
+
 
 // Delete a product (hard delete)
 export const deleteProduct = async (req, res) => {

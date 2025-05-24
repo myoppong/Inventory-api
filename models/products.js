@@ -34,7 +34,8 @@ const productSchema = new Schema({
   reorderThreshold:{ type: Number, required: true, default: 0 },
 
   //–– Media ––
-  image:           { type: String },                                             // product image URL
+  image:           { type: String },    
+  imageFileId: {type: String } ,                                       // product image URL
 
   //–– Codes ––
   barcode:         { type: String },                                             // Code128 barcode URL/data
