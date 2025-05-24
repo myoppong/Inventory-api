@@ -154,7 +154,7 @@ export const getProducts = async (req, res) => {
     name:           p.name,
     sku:            p.sku,
     category:       p.category?.name ?? '',
-    categoryId:     p.category?._id ?? '',         // ✅ needed for select input
+    categoryId:     p.category?.id ?? '',         // ✅ needed for select input
     stockQty:       p.stockQuantity,
     initialQuantity:p.initialQuantity,
     costPrice:      p.costPrice,
