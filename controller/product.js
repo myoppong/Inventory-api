@@ -95,20 +95,44 @@ export const createProduct = async (req, res) => {
 };
 
 // Get products with filters and pagination
+// Get products with filters and pagination
 export const getProducts = async (req, res) => {
   try {
-    const { search, category, minPrice, maxPrice, stockStatus, page = 1, limit = 10 } = req.query;
-    const filter = { isDeleted: false };
+    const {
+      search,
+      category,
+      minPrice,
+      maxPrice,
+      stockStatus,
+      page = 1,
+      limit = 10
+    } = req.query;
 
-    if (search) filter.name = { $regex: search, $options: 'i' };
-    if (category) filter.category = category;
-    if (minPrice != null && maxPrice != null) filter.price = { $gte: minPrice, $lte: maxPrice };
+    const filter = {};
+
+    if (search) {
+      filter.name = { $regex: search, $options: 'i' };
+    }
+
+    if (category) {
+      filter.category = category; // must be ObjectId string
+    }
+
+    if (minPrice != null && maxPrice != null) {
+      filter.price = { $gte: Number(minPrice), $lte: Number(maxPrice) };
+    }
+
     if (stockStatus) {
-      filter.initialQuantity = stockStatus === 'out-of-stock' ? 0 : { $gt: 0 };
+      filter.stockQuantity =
+        stockStatus === 'out-of-stock'
+          ? 0
+          : { $gt: 0 };
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    const docs = await productModel.find(filter)
+    
+    const docs = await productModel
+      .find(filter)
       .populate('category', 'name')
       .skip(skip)
       .limit(Number(limit))
@@ -117,26 +141,26 @@ export const getProducts = async (req, res) => {
 
     const totalCount = await productModel.countDocuments(filter);
 
-    // Map documents into the exact fields needed by your POS/table UI
     const products = docs.map(p => {
-      // derive status
       const status =
-        p.stockQuantity === 0 ? 'out-of-stock'
-        : p.stockQuantity <= p.reorderThreshold ? 'low-stock'
-        : 'in-stock';
+        p.stockQuantity === 0
+          ? 'out-of-stock'
+          : p.stockQuantity <= p.reorderThreshold
+          ? 'low-stock'
+          : 'in-stock';
 
       return {
-        id:           p.id,               // internal ID
-        productId:     p.productId,         // 6-digit auto code
-        thumbnail:     p.image,             // URL for 40×40px
-        name:          p.name,
-        sku:           p.sku,
-        category:      p.category?.name ?? '',
-        stockQty:      p.stockQuantity,     // numeric
-        status,                             // drives badge color
-        lastUpdated:   p.updatedAt.toLocaleDateString('en-US'), 
-        qrCode:        p.qrCode,
-        barcode:       p.barcode
+        id: p._id,
+        productId: p.productId,
+        thumbnail: p.image,
+        name: p.name,
+        sku: p.sku,
+        category: p.category?.name ?? '',
+        stockQty: p.stockQuantity,
+        status,
+        lastUpdated: new Date(p.updatedAt).toLocaleDateString('en-US'),
+        qrCode: p.qrCode,
+        barcode: p.barcode
       };
     });
 
@@ -148,6 +172,7 @@ export const getProducts = async (req, res) => {
         pages: Math.ceil(totalCount / limit)
       }
     });
+
   } catch (err) {
     return res.status(500).json({
       error: 'Failed to retrieve products.',
@@ -155,6 +180,7 @@ export const getProducts = async (req, res) => {
     });
   }
 };
+
 
 
 // Quick view of a product
