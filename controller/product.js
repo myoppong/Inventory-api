@@ -141,28 +141,34 @@ export const getProducts = async (req, res) => {
 
     const totalCount = await productModel.countDocuments(filter);
 
-    const products = docs.map(p => {
-      const status =
-        p.stockQuantity === 0
-          ? 'out-of-stock'
-          : p.stockQuantity <= p.reorderThreshold
-          ? 'low-stock'
-          : 'in-stock';
+   const products = docs.map(p => {
+  const status =
+    p.stockQuantity === 0 ? 'out-of-stock'
+    : p.stockQuantity <= p.reorderThreshold ? 'low-stock'
+    : 'in-stock';
 
-      return {
-        id: p._id,
-        productId: p.productId,
-        thumbnail: p.image,
-        name: p.name,
-        sku: p.sku,
-        category: p.category?.name ?? '',
-        stockQty: p.stockQuantity,
-        status,
-        lastUpdated: new Date(p.updatedAt).toLocaleDateString('en-US'),
-        qrCode: p.qrCode,
-        barcode: p.barcode
-      };
-    });
+  return {
+    id:             p.id,
+    productId:      p.productId,
+    thumbnail:      p.image,
+    name:           p.name,
+    sku:            p.sku,
+    category:       p.category?.name ?? '',
+    categoryId:     p.category?._id ?? '',         // ✅ needed for select input
+    stockQty:       p.stockQuantity,
+    initialQuantity:p.initialQuantity,
+    costPrice:      p.costPrice,
+    price:          p.price,
+    reorderThreshold: p.reorderThreshold,
+    batchNumber:    p.batchNumber,
+    expiryDate:     p.expiryDate,
+    qrCode:         p.qrCode,
+    barcode:        p.barcode,
+    status,
+    lastUpdated:    p.updatedAt.toLocaleDateString('en-US'),
+  };
+});
+
 
     return res.status(200).json({
       products,
@@ -324,7 +330,7 @@ export const getProductDetails = async (req, res) => {
 
     // Structure response
     const result = {
-      id:             product._id,
+      id:             product.id,
       productId:      product.productId,
       name:           product.name,
       sku:            product.sku,
