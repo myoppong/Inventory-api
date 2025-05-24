@@ -25,7 +25,7 @@ productRouter.get("/products/:id/quick-view", isAuthenticated, getProductQuickVi
 //  Get product details (Authenticated users)
 productRouter.get("/products/:id/product-details", isAuthenticated, getProductDetails);
 //  Update a product (Only Admins)
-productRouter.put("/products/:id/update", isAuthenticated, authorizedRoles("admin"), updateProduct);
+productRouter.patch("/products/:id/update", isAuthenticated, authorizedRoles("admin"), updateProduct);
 
 //  Delete a product (Only Admins)
 productRouter.delete("/products/:id/delete", isAuthenticated, authorizedRoles("admin"), deleteProduct);
