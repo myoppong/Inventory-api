@@ -148,7 +148,7 @@ export const getProducts = async (req, res) => {
     : 'in-stock';
 
   return {
-    id:             p.id,
+   id:               p._id.toString(),
     productId:      p.productId,
     thumbnail:      p.image,
     name:           p.name,
