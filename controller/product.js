@@ -44,6 +44,7 @@ export const createProduct = async (req, res) => {
     const barcode = await generateBarcode(sku);
 
     // Upload product image
+    let imageFileId='';
     let imageUrl = '';
     if (req.file) {
       const upload = await imagekit.upload({
@@ -96,7 +97,7 @@ export const createProduct = async (req, res) => {
   }
 };
 
-// Get products with filters and pagination
+
 // Get products with filters and pagination
 export const getProducts = async (req, res) => {
   try {
