@@ -126,19 +126,12 @@ export const getProducts = async (req, res) => {
     }
 
 // in your getProducts controller, replace the stockStatus logic with:
-if (stockStatus === 'low-stock') {
-  filter.$expr = {
-    $and: [
-      { $gt: ['$stockQuantity', 0] },
-      { $lte: ['$stockQuantity', '$reorderThreshold'] }
-    ]
-  };
-} else if (stockStatus === 'in-stock') {
-  filter.$expr = {
-    $gt: ['$stockQuantity', '$reorderThreshold']
-  };
-}
-else if (stockStatus === 'low-stock') {
+   // stockStatus filter
+   if (stockStatus === 'out-of-stock') {
+     // exactly zero in stock
+     filter.stockQuantity = 0;
+   }
+   else if (stockStatus === 'low-stock') {
      // >0 and <= reorderThreshold
      filter.$expr = {
        $and: [
@@ -147,6 +140,13 @@ else if (stockStatus === 'low-stock') {
        ]
      };
    }
+  else if (stockStatus === 'in-stock') {
+     // strictly above reorderThreshold
+     filter.$expr = {
+       $gt: ['$stockQuantity', '$reorderThreshold']
+     };
+   }
+
 
     const skip = (Number(page) - 1) * Number(limit);
     
