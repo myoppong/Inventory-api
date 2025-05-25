@@ -57,3 +57,71 @@ if (type === 'sale') {
     return res.status(500).json({ error: 'Failed to record inventory transaction.', details: err.message });
   }
 };
+
+
+export const listInventoryTransactions = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 20,
+      productId,
+      type,
+      dateFrom,
+      dateTo
+    } = req.query;
+
+    const filter = {};
+
+    if (productId) {
+      filter.product = productId;
+    }
+    if (type) {
+      filter.type = type;
+    }
+    if (dateFrom || dateTo) {
+      filter.timestamp = {};
+      if (dateFrom) filter.timestamp.$gte = new Date(dateFrom);
+      if (dateTo)   filter.timestamp.$lte = new Date(dateTo);
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+
+    // fetch matching docs
+    const [docs, total] = await Promise.all([
+      stockModel
+        .find(filter)
+        .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(Number(limit))
+        .populate('product', 'name productId')          // only bring back name & sku
+        .populate('performedBy', 'username email'),
+      stockModel.countDocuments(filter)
+    ]);
+
+    const transactions = docs.map(doc => ({
+      id:           doc.id,
+      product:      doc.product,
+      type:         doc.type,
+      quantity:     doc.quantity,
+      reference:    doc.reference,
+      performedBy:  doc.performedBy,
+      timestamp:    doc.timestamp
+    }));
+
+    return res.json({
+      transactions,
+      pagination: {
+        total,
+        page:   Number(page),
+        pages:  Math.ceil(total / limit),
+        limit:  Number(limit)
+      }
+    });
+  } catch (err) {
+    console.error('Inventory list error:', err);
+    return res.status(500).json({
+      error:   'Failed to retrieve inventory transactions.',
+      details: err.message
+    });
+  }
+};
