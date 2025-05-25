@@ -126,11 +126,13 @@ export const getProducts = async (req, res) => {
     }
 
     if (stockStatus) {
-      filter.stockQuantity =
-        stockStatus === 'out-of-stock'
-          ? 0
-          : { $gt: 0 };
-    }
+  filter.stockQuantity =
+    stockStatus === 'out-of-stock'
+      ? 0
+    : stockStatus === 'low-stock'
+      ? { $gt: 0, $lte: reorderThreshold }
+      : { $gt: reorderThreshold };
+}
 
     const skip = (Number(page) - 1) * Number(limit);
     
