@@ -43,7 +43,7 @@ if (type === 'sale') {
       type,
       quantity: Math.abs(quantity),  // store positive number for clarity
       reference,
-      performedBy: req.user?.id   // if you keep auth info in req.user
+      performedBy: req.auth.id   // if you keep auth info in req.user
     });
 
     return res.status(201).json({
