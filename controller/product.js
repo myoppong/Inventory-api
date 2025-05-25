@@ -400,7 +400,7 @@ export const getProductDetails = async (req, res) => {
 export const printProductDetails = async (req, res) => {
   try {
     const product = await productModel.findById(req.params.id)
-      .select('name productId qrCode barcode');
+      .select('name productId qrCode barcode price');
 
     if (!product) {
       return res.status(404).json({ error: 'Product not found.' });
