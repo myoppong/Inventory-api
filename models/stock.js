@@ -6,7 +6,7 @@ const stockSchema = new Schema({
   type:        { type: String, enum: ['restock','sale','adjustment'], required: true },
   quantity:    { type: Number, required: true },
   reference:   { type: String },               // e.g., PO#, Sales Order#
-  performedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+  performedBy: { type: Schema.Types.ObjectId, ref: 'user' },
   timestamp:   { type: Date, default: Date.now }
 }, {
   timestamps: false
