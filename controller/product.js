@@ -138,7 +138,15 @@ if (stockStatus === 'low-stock') {
     $gt: ['$stockQuantity', '$reorderThreshold']
   };
 }
-
+else if (stockStatus === 'low-stock') {
+     // >0 and <= reorderThreshold
+     filter.$expr = {
+       $and: [
+         { $gt: ['$stockQuantity', 0] },
+         { $lte: ['$stockQuantity', '$reorderThreshold'] }
+       ]
+     };
+   }
 
     const skip = (Number(page) - 1) * Number(limit);
     
