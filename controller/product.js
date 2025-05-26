@@ -459,3 +459,28 @@ export const printProductDetails = async (req, res) => {
     return res.status(500).json({ error: 'Failed to generate print details.', details: err.message });
   }
 };
+
+
+export async function getProductSuggestions(req, res) {
+  try {
+    const q = (req.query.q || '').trim();
+    if (!q) return res.json({ suggestions: [] });
+
+    const re = new RegExp(q, 'i');
+    const suggestions = await productModel
+      .find({
+        $or: [
+          { name: re },
+          { productId: re },
+          { sku: re },
+        ]
+      })
+      .limit(10)
+      .select('_id name productId sku image');
+
+    return res.json({ suggestions });
+  } catch (err) {
+    console.error('Suggestion error:', err);
+    return res.status(500).json({ error: 'Could not fetch suggestions.' });
+  }
+}

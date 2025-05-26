@@ -7,7 +7,7 @@ import {
   updateProduct,
   deleteProduct,
   getProductDetails,
-  printProductDetails,} from "../controller/product.js";
+  printProductDetails,getProductSuggestions} from "../controller/product.js";
 import { isAuthenticated, authorizedRoles } from "../middlewares/auth.js";
 import { productPicturesUpload, } from "../utils/imagekit.js";
 
@@ -36,5 +36,7 @@ productRouter.get("/products/:id/print", isAuthenticated, printProductDetails);
 
 
 productRouter.get("/products/lookup", lookupProduct);
+
+productRouter.get('/suggestions', getProductSuggestions);
 
 export default productRouter;
