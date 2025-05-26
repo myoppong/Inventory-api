@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createProduct,
   getProducts,
+  lookupProduct,
   getProductQuickView,
   updateProduct,
   deleteProduct,
@@ -32,5 +33,8 @@ productRouter.delete("/products/:id/delete", isAuthenticated, authorizedRoles("a
 
 //  Print Product QR Code & Barcode (Authenticated users)
 productRouter.get("/products/:id/print", isAuthenticated, printProductDetails);
+
+
+productRouter.get("/products/lookup", lookupProduct);
 
 export default productRouter;

@@ -207,6 +207,39 @@ export const getProducts = async (req, res) => {
 };
 
 
+// src/controllers/productController.js
+
+/**
+ * GET /products/lookup?code=...
+ */
+export const lookupProduct = async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) {
+      return res.status(400).json({ error: "Code parameter is required." });
+    }
+
+    // Try by productId, SKU, barcode, qrCode
+    const product = await productModel.findOne({
+      $or: [
+        { productId: code },
+        { sku: code },
+        { barcode: code },
+        { name: code },
+        { qrCode: code }
+      ]
+    }).lean();
+
+    if (!product) {
+      return res.status(404).json({ error: "Product not found." });
+    }
+    return res.json({ product });
+  } catch (err) {
+    console.error("Lookup error:", err);
+    return res.status(500).json({ error: "Lookup failed.", details: err.message });
+  }
+};
+
 
 // Quick view of a product
 export const getProductQuickView = async (req, res) => {
