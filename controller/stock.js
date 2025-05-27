@@ -18,7 +18,7 @@ export const createInventoryTransaction = async (req, res) => {
     const increment =
       type === 'restock'      ? +quantity :
       type === 'sale'         ? -quantity :
-      type === 'adjustment'   ? quantity : 0;
+      type === 'adjustment'   ? -quantity : 0;
 
 if (type === 'sale') {
   const product = await productModel.findById(productId);
