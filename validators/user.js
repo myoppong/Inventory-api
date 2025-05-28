@@ -70,3 +70,44 @@ export const deleteUserValidator = Joi.object({
     'any.required': `"id" is a required field`
   })
 });
+
+
+
+
+export const updateMeValidator = Joi.object({
+  username: Joi.string()
+    .alphanum()
+    .min(3)
+    .max(30)
+    .messages({
+      'string.alphanum': 'Username must only contain letters and numbers.',
+      'string.min': 'Username must be at least 3 characters.',
+      'string.max': 'Username cannot exceed 30 characters.'
+    }),
+
+  email: Joi.string()
+    .email()
+    .messages({ 'string.email': 'Must be a valid email address.' }),
+
+  password: Joi.string()
+    .min(8)
+    .messages({ 'string.min': 'Password must be at least 8 characters long.' }),
+
+  confirmPassword: Joi.any()
+    .valid(Joi.ref('password'))
+    .when('password', {
+      is: Joi.exist(),
+      then: Joi.required(),
+      otherwise: Joi.forbidden()
+    })
+    .messages({
+      'any.only': 'confirmPassword must match password.',
+      'any.required': 'Please confirm your new password.',
+      'any.unknown': 'confirmPassword is not allowed when not changing password.'
+    })
+})
+  // must include at least one of username/email/password
+  .or('username', 'email', 'password')
+  .messages({
+    'object.missing': 'Please provide at least one field to update: username, email, or password.'
+  });

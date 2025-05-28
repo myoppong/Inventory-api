@@ -1,5 +1,7 @@
 import { userModel } from "../models/user.js";
 import { createUserValidator, deleteUserValidator, loginUserValidator, updateUserValidator, getUserValidator } from "../validators/user.js"
+
+import { updateMeValidator } from '../validators/user.js';
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { mailTransporter } from "../utils/mailing.js";
@@ -35,11 +37,6 @@ export const loginUser = async (req, res, next) => {
         return res.status(401).json('invalid password')
     }
 
-    // Check Role
-    // if (user.role !== value.role) {
-
-    //     return res.status(403).json({ message: "Unauthorized role selected" });
-    // }
     //generate access token
     const accessToken = jwt.sign(
         { id: user.id, role: user.role, username:user.username,  },
@@ -154,19 +151,6 @@ export const getUsers = async (req, res) => {
 };
 
 // Get Single User
-// export const getUser = async (req, res) => {
-//     const { error } = getUserValidator.validate(req.params);
-//     if (error) return res.status(400).json({ message: error.details[0].message });
-
-//     try {
-//         const user = await userModel.findById(req.params.id);
-//         if (!user) return res.status(404).json({ message: "User not found" });
-
-//         return res.status(200).json(user);
-//     } catch (error) {
-//         return res.status(500).json({ message: "Error fetching user", error });
-//     }
-// };
 
 
 export const getUser = async (req, res, next) => {
@@ -211,22 +195,6 @@ export const getUser = async (req, res, next) => {
   }
 };
 
-// export const getAuthenticatedUser = async (req, res, next) => {
-
-
-//     try {
-
-//         //get user by id using req.auth.id
-//         const result = await userModel
-//             .findById(req.auth.id)
-//             .select({ password: false });
-//         //return response
-//         res.status(200).json(result);
-//         console.log("success!");
-//     } catch (error) {
-//         next(error);
-//     }
-// };
 
 
 
@@ -261,5 +229,48 @@ export const getAuthenticatedUser = async (req, res, next) => {
   } catch (error) {
     // Pass unexpected errors to your error handler
     return next(error);
+  }
+};
+
+
+export const updateMe = async (req, res, next) => {
+  // 1. Validate incoming body
+  // we'll strip out any `role` or other forbidden fields before validating
+  const allowed = (({ username, email, password }) => ({ username, email, password }))(req.body);
+  const { error, value } = updateMeValidator.validate(allowed, { presence: 'optional' });
+  if (error) {
+    return res.status(422).json({ message: error.details[0].message });
+  }
+
+  // 2. If password is being changed, hash it
+  if (value.password) {
+    value.password = await bcrypt.hash(value.password, 10);
+  }
+
+  // 3. Update the current user
+  try {
+    const updated = await userModel.findByIdAndUpdate(
+      req.auth.id,
+      value,
+      { new: true, select: '-password -__v' }
+    );
+    if (!updated) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    // 4. Return the updated public data
+    return res.status(200).json({
+      message: 'Profile updated.',
+      user: {
+        id:        updated.id,
+        username:  updated.username,
+        email:     updated.email,
+        role:      updated.role,     // role never changed here
+        updatedAt: updated.updatedAt,
+        lastLogin: updated.lastLogin,
+        createdAt: updated.createdAt
+      }
+    });
+  } catch (err) {
+    return next(err);
   }
 };

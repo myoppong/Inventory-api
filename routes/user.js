@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAuthenticatedUser, loginUser, updateUser, createUser, getUsers, getUser, deleteUser } from "../controller/user.js";
+import { getAuthenticatedUser, loginUser, updateUser,updateMe, createUser, getUsers, getUser, deleteUser } from "../controller/user.js";
 import { isAuthenticated, authorizedRoles } from "../middlewares/auth.js";
 
 //create user router
@@ -29,5 +29,9 @@ userRouter.patch('/users/update/:id', isAuthenticated, authorizedRoles("super ad
 // Delete a user
 userRouter.delete('/users/delete/:id', isAuthenticated, authorizedRoles("super admin"), deleteUser); 
 
+
+
+
+userRouter.patch('/users/me', isAuthenticated, updateMe);
 //export user router
 export default userRouter;
