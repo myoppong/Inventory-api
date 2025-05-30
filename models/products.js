@@ -39,7 +39,8 @@ const productSchema = new Schema({
 
   //–– Codes ––
   barcode:         { type: String },                                             // Code128 barcode URL/data
-  qrCode:          { type: String },                                             // QR code URL/data
+  qrCode:          { type: String }, 
+  barcodeValue: { type: String, unique: true, index: true },                                             // QR code URL/data
 
   //–– Lifecycle ––
   batchNumber:     { type: String, default: null },

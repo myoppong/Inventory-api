@@ -1,9 +1,11 @@
-import {productModel} from "../models/products.js";
-import { generateSKU } from "../utils/generateSKU.js";
+// src/controllers/productController.js
+import { productModel }             from "../models/products.js";
+import { generateSKU }              from "../utils/generateSKU.js";
 import { generateQRCode, generateBarcode } from "../utils/generateQRBarcode.js";
-import {imagekit} from "../utils/imagekit.js";
-import { categoryModel } from '../models/category.js';
-import { generateProductId } from '../utils/generateProductCode.js';
+import { imagekit }                 from "../utils/imagekit.js";
+import { categoryModel }            from '../models/category.js';
+import { generateProductId }        from '../utils/generateProductCode.js';
+import { customAlphabet }           from 'nanoid';
 
 // Create Product Function
 export const createProduct = async (req, res) => {
@@ -17,10 +19,11 @@ export const createProduct = async (req, res) => {
       initialQuantity,
       reorderThreshold,
       batchNumber,
-      expiryDate
+      expiryDate,
+      barcodeValue: incomingBarcodeValue
     } = req.body;
 
-    // Validate required fields
+    // 1) Basic field validation
     if (!name || !price || !costPrice || !category || !initialQuantity || !reorderThreshold) {
       return res.status(400).json({
         status: 'error',
@@ -28,7 +31,7 @@ export const createProduct = async (req, res) => {
       });
     }
 
-    // Validate category existence
+    // 2) Category must exist
     const categoryExists = await categoryModel.findById(category);
     if (!categoryExists) {
       return res.status(400).json({
@@ -37,26 +40,35 @@ export const createProduct = async (req, res) => {
       });
     }
 
-    // Generate product codes
-    const sku = generateSKU(name);
-    const productId = generateProductId(); // 6-digit unique code
-    const qrCode = await generateQRCode(sku);
-    const barcode = await generateBarcode(sku);
+    // 3) Generate deterministic codes
+    const sku       = generateSKU(name);
+    const productId = generateProductId(); // your 6-digit code
+    const qrCode    = await generateQRCode(sku);
 
-    // Upload product image
-    let imageFileId='';
-    let imageUrl = '';
+    // 4) Decide on a raw barcodeValue
+    //    • If user scanned/typed one: use that
+    //    • Else: generate a fresh 13-digit number
+    const rawBarcode = incomingBarcodeValue
+      ? incomingBarcodeValue
+      : customAlphabet('0123456789', 13)();
+
+    // 5) Turn that rawBarcode into a Base64 PNG
+    const barcodeImg = await generateBarcode(rawBarcode);
+
+    // 6) (Optional) Upload product image via ImageKit
+    let imageUrl    = '';
+    let imageFileId = '';
     if (req.file) {
       const upload = await imagekit.upload({
         file: req.file.buffer,
         fileName: req.file.originalname,
         folder: '/inventory',
       });
-      imageUrl = upload.url;
-      imageFileId = upload.fileId; 
+      imageUrl    = upload.url;
+      imageFileId = upload.fileId;
     }
 
-    // Create product entry
+    // 7) Persist
     const newProduct = await productModel.create({
       productId,
       name,
@@ -69,33 +81,38 @@ export const createProduct = async (req, res) => {
       reorderThreshold,
       batchNumber,
       expiryDate,
-      image: imageUrl,
-      imageFileId: imageFileId,
+
+      // ← your new barcode fields:
+      barcodeValue: rawBarcode,
+      barcode:      barcodeImg,
       qrCode,
-      barcode,
+
+      // ← existing media
+      image:       imageUrl,
+      imageFileId,
     });
 
     return res.status(201).json({
-      status: 'success',
+      status:  'success',
       message: 'Product created successfully.',
-      data: newProduct,
+      data:     newProduct,
     });
 
   } catch (err) {
-    if (err?.name === 'MongoServerError' && err?.code === 11000) {
+    if (err.name === 'MongoServerError' && err.code === 11000) {
       return res.status(400).json({
-        status: 'error',
-        message: 'Duplicate value detected (likely productId or SKU). Please retry with unique values.'
+        status:  'error',
+        message: 'Duplicate value detected (maybe productId, SKU or barcode).'
       });
     }
-
     return res.status(500).json({
-      status: 'error',
-      message: 'An unexpected error occurred while creating the product.',
-      error: err.message,
+      status:  'error',
+      message: 'Unexpected error creating product.',
+      error:    err.message,
     });
   }
 };
+
 
 
 // Get products with filters and pagination
@@ -209,9 +226,9 @@ export const getProducts = async (req, res) => {
 
 // src/controllers/productController.js
 
-/**
- * GET /products/lookup?code=...
- */
+
+ //GET /products/lookup?code=...
+
 export const lookupProduct = async (req, res) => {
   try {
     const { code } = req.query;
@@ -219,14 +236,14 @@ export const lookupProduct = async (req, res) => {
       return res.status(400).json({ error: "Code parameter is required." });
     }
 
-    // Try by productId, SKU, barcode, qrCode
+    // Try by productId, SKU, barcodeValue, QR, or name
     const product = await productModel.findOne({
       $or: [
-        { productId: code },
-        { sku: code },
-        { barcode: code },
-        { name: code },
-        { qrCode: code }
+        { productId:   code },
+        { sku:         code },
+        { barcodeValue: code },
+        { qrCode:      code },
+        { name:        code }
       ]
     }).lean();
 
@@ -234,12 +251,15 @@ export const lookupProduct = async (req, res) => {
       return res.status(404).json({ error: "Product not found." });
     }
     return res.json({ product });
+
   } catch (err) {
     console.error("Lookup error:", err);
-    return res.status(500).json({ error: "Lookup failed.", details: err.message });
+    return res.status(500).json({
+      error:   "Lookup failed.",
+      details: err.message
+    });
   }
 };
-
 
 // Quick view of a product
 export const getProductQuickView = async (req, res) => {
@@ -317,55 +337,62 @@ export const updateProduct = async (req, res) => {
       description,
       reorderThreshold,
       batchNumber,
-      expiryDate
+      expiryDate,
+      barcodeValue: incomingBarcodeValue
     } = req.body;
 
+    // 1) Find existing product
     const product = await productModel.findById(id);
     if (!product) {
       return res.status(404).json({ error: 'Product not found.' });
     }
 
+    // 2) If category is changing, ensure it's valid
     if (category) {
       const categoryExists = await categoryModel.findById(category);
       if (!categoryExists) {
         return res.status(400).json({ error: 'Invalid category selected.' });
       }
+      product.category = category;
     }
 
-    //  If new image uploaded, delete old one from ImageKit
-    let imageUrl = product.image;
+    // 3) Handle image upload replacement
+    let imageUrl    = product.image;
     let imageFileId = product.imageFileId;
-
     if (req.file) {
-      // Delete previous image if it exists
-      if (product.imageFileId) {
-        try {
-          await imagekit.deleteFile(product.imageFileId);
-        } catch (delErr) {
-          console.warn('Failed to delete old image from ImageKit:', delErr.message);
-        }
+      // delete old
+      if (imageFileId) {
+        try { await imagekit.deleteFile(imageFileId); }
+        catch (e) { console.warn('Could not delete old image:', e.message); }
       }
-
+      // upload new
       const upload = await imagekit.upload({
         file: req.file.buffer,
         fileName: req.file.originalname,
         folder: '/inventory',
       });
-
-      imageUrl = upload.url;
+      imageUrl    = upload.url;
       imageFileId = upload.fileId;
     }
 
-    // Update fields
-    product.name = name || product.name;
-    product.price = price || product.price;
-    product.costPrice = costPrice || product.costPrice;
-    product.category = category || product.category;
-    product.description = description || product.description;
-    product.reorderThreshold = reorderThreshold || product.reorderThreshold;
-    product.batchNumber = batchNumber || product.batchNumber;
-    product.expiryDate = expiryDate || product.expiryDate;
-    product.image = imageUrl;
+    // 4) If a new barcodeValue is provided, re-generate the barcode PNG
+    if (incomingBarcodeValue) {
+      const newBarcodeImg = await generateBarcode(incomingBarcodeValue);
+      product.barcodeValue = incomingBarcodeValue;
+      product.barcode      = newBarcodeImg;
+    }
+
+    // 5) Update simple scalar fields if provided
+    if (name)            product.name            = name;
+    if (price != null)   product.price           = price;
+    if (costPrice != null) product.costPrice     = costPrice;
+    if (description)     product.description     = description;
+    if (reorderThreshold != null) product.reorderThreshold = reorderThreshold;
+    if (batchNumber)     product.batchNumber     = batchNumber;
+    if (expiryDate)      product.expiryDate      = expiryDate;
+
+    // 6) Persist updated image fields
+    product.image       = imageUrl;
     product.imageFileId = imageFileId;
 
     await product.save();
@@ -374,10 +401,13 @@ export const updateProduct = async (req, res) => {
       message: 'Product updated successfully.',
       product
     });
-
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: 'Failed to update product.', details: err.message });
+  }
+  catch (err) {
+    console.error('Failed to update product:', err);
+    return res.status(500).json({
+      error:   'Failed to update product.',
+      details: err.message
+    });
   }
 };
 
@@ -397,6 +427,7 @@ export const deleteProduct = async (req, res) => {
   }
 };
 // Detailed view of a product
+// src/controllers/productController.js
 export const getProductDetails = async (req, res) => {
   try {
     const product = await productModel
@@ -407,58 +438,73 @@ export const getProductDetails = async (req, res) => {
       return res.status(404).json({ error: 'Product not found.' });
     }
 
-    // Determine status
-    const status = product.stockQuantity === 0
-      ? 'out-of-stock'
-      : product.stockQuantity <= product.reorderThreshold
-      ? 'low-stock'
-      : 'in-stock';
+    // Determine in-stock status
+    const status =
+      product.stockQuantity === 0
+        ? 'out-of-stock'
+        : product.stockQuantity <= product.reorderThreshold
+        ? 'low-stock'
+        : 'in-stock';
 
-    // Structure response
+    // Build the response DTO
     const result = {
-      id:             product.id,
-      productId:      product.productId,
-      name:           product.name,
-      sku:            product.sku,
-      category:       product.category?.name || null,
-      description:    product.description,
-      price:          product.price,
-      costPrice:      product.costPrice,
-      profit:         product.profit,
-      stockQuantity:  product.stockQuantity,
-      initialQuantity: product.initialQuantity,
+      id:               product.id,
+      productId:        product.productId,
+      name:             product.name,
+      sku:              product.sku,
+      category:         product.category?.name || null,
+      description:      product.description,
+      price:            product.price,
+      costPrice:        product.costPrice,
+      profit:           product.profit,
+      stockQuantity:    product.stockQuantity,
+      initialQuantity:  product.initialQuantity,
       reorderThreshold: product.reorderThreshold,
       status,
-      image:          product.image,
-      barcode:        product.barcode,
-      qrCode:         product.qrCode,
-      batchNumber:    product.batchNumber,
-      expiryDate:     product.expiryDate,
-      createdAt:      product.createdAt,
-      updatedAt:      product.updatedAt,
+      image:            product.image,
+      imageFileId:      product.imageFileId,
+      batchNumber:      product.batchNumber,
+      expiryDate:       product.expiryDate,
+      qrCode:           product.qrCode,
+      barcodeValue:     product.barcodeValue,   // ← newly exposed
+      barcode:          product.barcode,        // Base64 image
+      createdAt:        product.createdAt,
+      updatedAt:        product.updatedAt,
     };
 
     return res.status(200).json({ product: result });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to fetch product details.', details: err.message });
+    console.error('Error fetching product details:', err);
+    return res.status(500).json({
+      error:   'Failed to fetch product details.',
+      details: err.message
+    });
   }
 };
 
 
+
 // Print-ready product details
+// src/controllers/productController.js
 export const printProductDetails = async (req, res) => {
   try {
     const product = await productModel.findById(req.params.id)
-      .select('name productId qrCode barcode price');
+      .select('name productId qrCode barcode barcodeValue price');
 
     if (!product) {
       return res.status(404).json({ error: 'Product not found.' });
     }
+
     return res.status(200).json({ product });
   } catch (err) {
-    return res.status(500).json({ error: 'Failed to generate print details.', details: err.message });
+    console.error('Error generating print details:', err);
+    return res.status(500).json({
+      error:   'Failed to generate print details.',
+      details: err.message
+    });
   }
 };
+
 
 
 export async function getProductSuggestions(req, res) {
@@ -470,13 +516,14 @@ export async function getProductSuggestions(req, res) {
     const suggestions = await productModel
       .find({
         $or: [
-          { name: re },
+          { name:      re },
           { productId: re },
-          { sku: re },
+          { sku:       re },
+          { barcodeValue: re },    // ← add this line
         ]
       })
       .limit(10)
-      .select('_id name productId sku image');
+      .select('_id name productId sku image barcodeValue'); // ← and include it here
 
     return res.json({ suggestions });
   } catch (err) {
