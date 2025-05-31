@@ -16,12 +16,10 @@ await mongoose.connect(process.env.MONGO_URI)
 const app = express();
 app.use(express.json());
 
-
-// ({
-//   origin: 'http://localhost:3000', 
-//   credentials: true,               
-// })
-app.use(cors);
+app.use(cors({
+  origin: 'https://martstock.netlify.app', 
+  credentials: true,               
+}));
 app.use(userRouter);
 app.use(productRouter)
 app.use(categoryRouter)
