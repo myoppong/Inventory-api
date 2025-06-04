@@ -236,7 +236,7 @@ export const getAuthenticatedUser = async (req, res, next) => {
 export const updateMe = async (req, res, next) => {
   // 1. Validate incoming body
   // we'll strip out any `role` or other forbidden fields before validating
-  const allowed = (({ username, email, password }) => ({ username, email, password }))(req.body);
+  const allowed = (({ username, email, password,confirmPassword }) => ({ username, email, password,confirmPassword }))(req.body);
   const { error, value } = updateMeValidator.validate(allowed, { presence: 'optional' });
   if (error) {
     return res.status(422).json({ message: error.details[0].message });

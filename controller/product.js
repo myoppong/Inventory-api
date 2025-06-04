@@ -113,8 +113,6 @@ export const createProduct = async (req, res) => {
   }
 };
 
-
-
 // Get products with filters and pagination
 export const getProducts = async (req, res) => {
   try {
@@ -223,8 +221,6 @@ export const getProducts = async (req, res) => {
   }
 };
 
-
-// src/controllers/productController.js
 
 
  //GET /products/lookup?code=...
