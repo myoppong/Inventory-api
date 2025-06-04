@@ -3,6 +3,7 @@ import userRouter from './routes/user.js';
 import productRouter from './routes/product.js';
 import categoryRouter from './routes/category.js';
 import stockRouter from './routes/stock.js';
+ import authRouter from './routes/auth.js';
 import cors from 'cors';
 import  mongoose  from 'mongoose';
 import { userModel } from './models/user.js';
@@ -24,6 +25,8 @@ app.use(userRouter);
 app.use(productRouter)
 app.use(categoryRouter)
 app.use(stockRouter)
+app.use(authRouter)
+
 
 
 // Create Super Admin
