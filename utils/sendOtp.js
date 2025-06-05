@@ -1,5 +1,4 @@
 // src/utils/sendOtp.js
-
 import { createTransport } from 'nodemailer';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -34,7 +33,7 @@ function otpEmailTemplate({ fullName, otp, expiresInMinutes = 10 }) {
 export async function sendOTPViaEmail(email, otp, fullName = '') {
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn(
-      '⚠️ SMTP credentials not set; falling back to console.log for email OTP'
+      ' SMTP credentials not set; falling back to console.log for email OTP'
     );
     console.log(`OTP for ${email}: ${otp}`);
     return;
@@ -49,9 +48,9 @@ export async function sendOTPViaEmail(email, otp, fullName = '') {
       subject: 'Your One-Time Password',
       html,
     });
-    console.log(`✅ Sent OTP to ${email}`);
+    console.log(` Sent OTP to ${email}`);
   } catch (err) {
-    console.error(`❌ Failed to send OTP to ${email}:`, err);
+    console.error(` Failed to send OTP to ${email}:`, err);
     throw new Error('Unable to send OTP email');
   }
 }
