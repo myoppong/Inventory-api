@@ -1,4 +1,5 @@
 // src/routes/auth.js
+
 import Router from "express";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
@@ -21,7 +22,8 @@ authRouter.post("/forgot-password", async (req, res) => {
     // 1. Check if user exists
     const user = await userModel.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
-      // For security, do not reveal “no such user.” Just say “OTP sent” anyway.
+      console.log(`→ forgot-password requested for non-existent email: ${email}`);
+      // Do not reveal whether the user exists
       return res.json({ message: "If that email exists, an OTP has been sent." });
     }
 
@@ -35,18 +37,16 @@ authRouter.post("/forgot-password", async (req, res) => {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     // 5. Save OTP to DB
-    await otpModel.create({
-      email: user.email,
-      otp,
-      expiresAt,
-    });
+    await otpModel.create({ email: user.email, otp, expiresAt });
 
     // 6. Send OTP via email
+    console.log(`→ About to send OTP email to ${user.email}, OTP: ${otp}`);
     await sendOTPViaEmail(user.email, otp, user.username);
+    console.log(`→ Finished sendOTPViaEmail call for ${user.email}`);
 
     return res.json({ message: "If that email exists, an OTP has been sent." });
   } catch (err) {
-    console.error("Forgot Password error:", err);
+    console.error(" Forgot Password error:", err);
     return res.status(500).json({ message: "Internal server error." });
   }
 });
@@ -55,28 +55,34 @@ authRouter.post("/forgot-password", async (req, res) => {
  * POST /auth/verify-otp
  * Body: { email, otp }
  * → Check OTP exists, not expired, and matches.
- *    If valid → respond 200; else 400 with message.
  */
 authRouter.post("/verify-otp", async (req, res) => {
   try {
     const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ message: "Email and OTP are required." });
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required." });
+    }
 
-    const record = await otpModel.findOne({ email: email.toLowerCase().trim(), otp });
+    const record = await otpModel.findOne({
+      email: email.toLowerCase().trim(),
+      otp,
+    });
+
     if (!record) {
+      console.log(`→ verify-otp failed: invalid record for ${email} / ${otp}`);
       return res.status(400).json({ message: "Invalid OTP." });
     }
 
     if (new Date() > record.expiresAt) {
-      // Delete expired record
+      console.log(`→ verify-otp: OTP expired for ${email}`);
       await otpModel.deleteMany({ email: email.toLowerCase().trim() });
       return res.status(400).json({ message: "OTP has expired. Please request a new one." });
     }
 
-    // If it reaches here, OTP is valid & not expired. Do NOT delete here—wait until reset.
+    console.log(`→ verify-otp success for ${email}`);
     return res.json({ message: "OTP verified" });
   } catch (err) {
-    console.error("Verify OTP error:", err);
+    console.error(" Verify OTP error:", err);
     return res.status(500).json({ message: "Internal server error." });
   }
 });
@@ -85,7 +91,7 @@ authRouter.post("/verify-otp", async (req, res) => {
  * POST /auth/reset-password
  * Body: { email, otp, password }
  * → Check OTP again (valid + not expired), then hash new password and update user.
- *    Finally, delete OTP record so it cannot be reused.
+ *   Finally, delete OTP record so it cannot be reused.
  */
 authRouter.post("/reset-password", async (req, res) => {
   try {
@@ -95,11 +101,18 @@ authRouter.post("/reset-password", async (req, res) => {
     }
 
     // 1. Find OTP record
-    const record = await otpModel.findOne({ email: email.toLowerCase().trim(), otp });
+    const record = await otpModel.findOne({
+      email: email.toLowerCase().trim(),
+      otp,
+    });
+
     if (!record) {
+      console.log(`→ reset-password failed: invalid OTP for ${email}`);
       return res.status(400).json({ message: "Invalid OTP." });
     }
+
     if (new Date() > record.expiresAt) {
+      console.log(`→ reset-password: OTP expired for ${email}`);
       await otpModel.deleteMany({ email: email.toLowerCase().trim() });
       return res.status(400).json({ message: "OTP has expired. Please request a new one." });
     }
@@ -107,9 +120,10 @@ authRouter.post("/reset-password", async (req, res) => {
     // 2. Hash new password
     const hashed = await bcrypt.hash(password, 12);
 
-    // 3. Update user’s password
+    // 3. Update user's password
     const user = await userModel.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
+      console.log(`→ reset-password: no user found for ${email}`);
       return res.status(404).json({ message: "User not found." });
     }
     user.password = hashed;
@@ -117,10 +131,11 @@ authRouter.post("/reset-password", async (req, res) => {
 
     // 4. Delete all OTPs for this email
     await otpModel.deleteMany({ email: email.toLowerCase().trim() });
+    console.log(`→ reset-password: password updated for ${email}`);
 
     return res.json({ message: "Password has been successfully reset." });
   } catch (err) {
-    console.error("Reset Password error:", err);
+    console.error(" Reset Password error:", err);
     return res.status(500).json({ message: "Internal server error." });
   }
 });
