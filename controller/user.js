@@ -88,17 +88,6 @@ export const createUser = async (req, res, next) => {
         ...value,
         password: hashedPassword
     });
-
-
-    //send registration email to user 
-    // await mailTransporter.sendMail({
-    //     from:'michaeloppong03@gmail.com',
-    //     to: value.email,
-    //     subject:'Checking out nodemailer',
-    //     html: registerUserMailTemplate.replace('{{username}}',value.username)
-
-    // });
-    //optionaly generate access tokens for user
     //return response
     console.log("User registered");
     res.status(201).json({ message: "User created successfully", user: result });
@@ -234,41 +223,72 @@ export const getAuthenticatedUser = async (req, res, next) => {
 
 
 export const updateMe = async (req, res, next) => {
-  // 1. Validate incoming body
-  // we'll strip out any `role` or other forbidden fields before validating
-  const allowed = (({ username, email, password,confirmPassword }) => ({ username, email, password,confirmPassword }))(req.body);
-  const { error, value } = updateMeValidator.validate(allowed, { presence: 'optional' });
+  // 1. Extract only the allowed fields from req.body
+  const allowed = (({ username, email, oldPassword, password, confirmPassword }) => ({
+    username,
+    email,
+    oldPassword,
+    password,
+    confirmPassword,
+  }))(req.body);
+
+  // 2. Validate the incoming body
+  const { error, value } = updateMeValidator.validate(allowed, { presence: "optional" });
   if (error) {
     return res.status(422).json({ message: error.details[0].message });
   }
 
-  // 2. If password is being changed, hash it
+  // 3. Fetch the user from DB to verify oldPassword (if provided)
+  let user;
+  try {
+    user = await userModel.findById(req.auth.id).select("+password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+  } catch (err) {
+    return next(err);
+  }
+
+  // 4. If password is being changed, verify oldPassword and then hash the new one
   if (value.password) {
+    const isMatch = await bcrypt.compare(value.oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect." });
+    }
     value.password = await bcrypt.hash(value.password, 10);
   }
 
-  // 3. Update the current user
+  // 5. Remove any fields we don't want to pass to Mongo (oldPassword, confirmPassword)
+  delete value.oldPassword;
+  delete value.confirmPassword;
+
+  // 6. Update the current user
   try {
     const updated = await userModel.findByIdAndUpdate(
       req.auth.id,
       value,
-      { new: true, select: '-password -__v' }
+      {
+        new: true,
+        select: "-password -__v",
+      }
     );
+
     if (!updated) {
-      return res.status(404).json({ message: 'User not found.' });
+      return res.status(404).json({ message: "User not found." });
     }
-    // 4. Return the updated public data
+
+    // 7. Return the updated public data
     return res.status(200).json({
-      message: 'Profile updated.',
+      message: "Profile updated.",
       user: {
-        id:        updated.id,
-        username:  updated.username,
-        email:     updated.email,
-        role:      updated.role,     // role never changed here
+        id: updated.id,
+        username: updated.username,
+        email: updated.email,
+        role: updated.role,
         updatedAt: updated.updatedAt,
         lastLogin: updated.lastLogin,
-        createdAt: updated.createdAt
-      }
+        createdAt: updated.createdAt,
+      },
     });
   } catch (err) {
     return next(err);
