@@ -140,8 +140,6 @@ export const getUsers = async (req, res) => {
 };
 
 // Get Single User
-
-
 export const getUser = async (req, res, next) => {
   // 1. Validate the incoming :id param
   const { error } = getUserValidator.validate(req.params);
